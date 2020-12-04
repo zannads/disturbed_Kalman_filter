@@ -7,25 +7,38 @@
 
 %state eq
 % A n x n
-A = [0.3, 0.4; 0, 0.5];
+A = [0.3, 0.4; 0, 0.2];
 % Bu n x m
 Bu = [1; 7];
 % Bw n x m_w
-Bw = [1, 2.3; 4.1, 1.7];        
+Bw = [0.001, 0; 0.001, 0];        
 % Du m x m_n
-Du = 0.5 ;
+Du = 0.3;
 
 %output eq
 % C p x n 
 C = [1, 1]; 
 % Dw p x m_w
-Dw = [0.4, 0.3];
+Dw = [0, 0.3];
 D = 0;
 
-tau = 5;            %delay steps
+tau = 3;            %delay steps
 
 %check conditions for original system
+O_m = obsv(A, C);
+if( (length(A) - rank(O_m)) == 0)
+    disp('starting system observable');
+end
+R_m = ctrb(A, Bw);
+if( (length(A) - rank(R_m)) == 0)
+    disp('starting system reachable');
+end
 
+% 
+% syms theta
+% condi = [ A-eye(size(A))*exp(i*theta), Bw;
+%   C, Dw]
+% test = rank(condi);
 
 %enlarge 
 [~, m_n] = size(Du);
@@ -33,7 +46,18 @@ tau = 5;            %delay steps
 [A_tau, Bw_tau, Bu_tau, C_tau, Dw_tau, D_tau] = enlarge(A, [-Bu*Du,  Bw], Bu, C, [zeros(p, m_n), Dw], D, tau);
 
 %check conditions for enlarged system
-Bu*Du
+%our_condition = Bu*Du
+O_m_tau = obsv(A_tau, C_tau);
+if( length(A_tau) - rank(O_m_tau) == 0 )
+    disp('final system observable');
+end
+R_m_tau = ctrb(A_tau, Bw_tau);
+if( length(A_tau) - rank(R_m_tau) == 0 )
+    disp('final system reachable');
+end
+% condi = [ A_tau-eye(size(A_tau))*exp(i*theta), Bw_tau;
+%   C_tau, Dw_tau];
+% test = rank(condi);
 
 %compute kalman
 Q_tilde = Bw_tau*Bw_tau';
@@ -43,6 +67,8 @@ R_tilde = Dw_tau*Dw_tau';
 K = -K'
 Y
 L
+
+
     
 %% simulink preparation
 % the real system evolves without -Bu*Du ...
@@ -57,9 +83,18 @@ D_simu_state = zeros(n_en, m_en);
 A_KF = A_tau + K*C_tau;
 B_KF = [Bu_tau, -K];
 [n_kf, ~] = size(A_KF);
-[~, m_kf] =size(B_KF);
+[~, m_kf] = size(B_KF);
 C_KF = eye( n_kf, n_kf );
 D_KF = zeros(n_kf, m_kf);
+
+[n_kf, ~] = size(A);
+A_KF_red = A + K(1:n_kf)*C;
+B_KF_red = [Bu, -K(1:n_kf)];
+[~, m_kf] = size(B_KF_red);
+C_KF_red = eye( n_kf, n_kf);
+D_KF_red = zeros(n_kf, m_kf);
+
+
 sim('disturbed_kalman');
 %% functions
 function [A_tau, Bw_tau, Bu_tau, C_tau, Dw_tau, D_tau] = enlarge(A, Bw, Bu, C, Dw, D, tau)
