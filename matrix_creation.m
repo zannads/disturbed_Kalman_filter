@@ -13,13 +13,13 @@ Bu = [1; 7];
 % Bw n x m_w
 Bw = [0.001, 0; 0.001, 0];        
 % Du m x m_n
-Du = 0.3;
+Du = 0.01;
 
 %output eq
 % C p x n 
 C = [1, 1]; 
 % Dw p x m_w
-Dw = [0, 0.3];
+Dw = [0, 0.03];
 D = 0;
 
 tau = 3;            %delay steps
@@ -103,15 +103,16 @@ function [A_tau, Bw_tau, Bu_tau, C_tau, Dw_tau, D_tau] = enlarge(A, Bw, Bu, C, D
 
 if( n ~=0 ) %if everything is ok
     
-    A_tau = [A, Bu, zeros(n, tau-1);
-        zeros(tau-1, n+m) eye(tau-1);
-        zeros(1, n+tau)];
-    Bu_tau = [zeros(n+tau-1, m);
+    A_tau = [A,             Bu,  zeros(n, m*(tau-1));
+            zeros(m*(tau-1), n+m) eye(m*(tau-1));
+        zeros(m, n+m*(tau))];
+        
+    Bu_tau = [zeros(n+m*(tau-1), m);
         eye(m)];
     Bw_tau = [ Bw;
-        zeros(tau, m_w)];
+        zeros(m*tau, m_w)];
     
-    C_tau = [C, zeros(p, tau)];
+    C_tau = [C, zeros(p, m*tau)];
     Dw_tau = Dw;
     D_tau = D;
 end
