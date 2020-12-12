@@ -20,7 +20,7 @@ Du = 0.3;
 C = [1, 1]; 
 % Dw p x m_w
 Dw = [0, 0.4];
-D = 0;
+D = [0];
 
 tau = 3;            %delay steps
 
@@ -41,8 +41,10 @@ end
 % test = rank(condi);
 
 %enlarge 
+n = size(A, 1);
+p = size(C, 1);
+m = size(Bu, 2);
 [~, m_n] = size(Du);
-[p, ~] = size(C);
 [A_tau, Bw_tau, Bu_tau, C_tau, Dw_tau, D_tau] = enlarge(A, Bw, Bu, C, Dw, Du, D, tau);
 
 %check conditions for enlarged system
@@ -66,7 +68,8 @@ variance_mat = [Bw_tau; Dw_tau]*[Bw_tau; Dw_tau]';
 Q_tilde = Bw_tau(:, 2:3)*Bw_tau(:, 2:3)';
 R_tilde = Dw_tau(:, 2:3)*Dw_tau(:, 2:3)';
 %%
-[Y,K,L]=idare(A_tau',C_tau',Q_tilde,R_tilde);
+
+[Y,K,L, INFO]=idare(A_tau',C_tau',Q_tilde,R_tilde, Bw_tau(:, 2:3)*Dw_tau(:, 2:3)');
 K = -K'
 Y
 L
@@ -75,9 +78,6 @@ L
     
 %% simulink preparation
 % the real system evolves without -Bu*Du ...
-n = size(A, 1);
-p = size(C, 1);
-m = size(Bu, 2);
 B_simu = [Bu, Bw];
 D_simu = [zeros(p,m), Dw];
 C_simu_state = eye( n, n);
