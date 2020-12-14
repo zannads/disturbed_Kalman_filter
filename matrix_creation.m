@@ -11,9 +11,9 @@ A = [0.3, 0.4; 0, 0.2];
 % Bu n x m
 Bu = [1; 7];
 % Bw n x m_w
-Bw = [0.01,0 ; 0.01, 0];        
+Bw = [0.001, 0; 0.001, 0];        
 % Du m x m_n
-Du = 1;
+Du = 0.01;
 
 %output eq
 % C p x n 
@@ -43,7 +43,7 @@ end
 %enlarge 
 [~, m_n] = size(Du);
 [p, ~] = size(C);
-[A_tau, Bw_tau, Bu_tau, C_tau, Dw_tau, D_tau] = enlarge(A, Bw, Bu, C, Dw, D, Du, tau);
+[A_tau, Bw_tau, Bu_tau, C_tau, Dw_tau, D_tau] = enlarge(A, [-Bu*Du,  Bw], Bu, C, [zeros(p, m_n), Dw], D, tau);
 
 %check conditions for enlarged system
 %our_condition = Bu*Du
@@ -63,9 +63,8 @@ condi = [ A_tau-eye(size(A_tau))*exp(i*theta), Bw_tau;
 %compute kalman
 Q_tilde = Bw_tau*Bw_tau';
 R_tilde = Dw_tau*Dw_tau';
-Z_tilde = Bw_tau*Dw_tau';
 
-[Y,K,L, INFO]=idare(A_tau',C_tau',Q_tilde,R_tilde, Z_tilde);
+[Y,K,L]=idare(A_tau',C_tau',Q_tilde,R_tilde);
 K = -K'
 Y
 L
@@ -74,6 +73,7 @@ L
     
 %% simulink preparation
 % the real system evolves without -Bu*Du ...
+<<<<<<< HEAD
 % [A_simu, Bw_simu, Bu_simu, C_simu, Dw_simu, Du_simu] = enlarge(A, Bw, Bu, C, Dw, D, tau);
 % B_simu = [Bu_simu, Bw_simu, zeros(size(Bw_simu))];
 % D_simu = [Du_simu, zeros(size(Dw_simu)), Dw_simu];
@@ -98,8 +98,34 @@ L
 % 
 % 
 % sim('disturbed_kalman');
+=======
+[A_simu, Bw_simu, Bu_simu, C_simu, Dw_simu, Du_simu] = enlarge(A, Bw, Bu, C, Dw, D, tau);
+B_simu = [Bu_simu, Bw_simu];
+D_simu = [Du_simu, Dw_simu];
+[n_en, ~] = size(A_simu);
+[~, m_en] =size(B_simu);
+C_simu_state = eye( n_en, n_en);
+D_simu_state = zeros(n_en, m_en);
+
+A_KF = A_tau + K*C_tau;
+B_KF = [Bu_tau, -K];
+[n_kf, ~] = size(A_KF);
+[~, m_kf] = size(B_KF);
+C_KF = eye( n_kf, n_kf );
+D_KF = zeros(n_kf, m_kf);
+
+[n_kf, ~] = size(A);
+A_KF_red = A + K(1:n_kf)*C;
+B_KF_red = [Bu, -K(1:n_kf)];
+[~, m_kf] = size(B_KF_red);
+C_KF_red = eye( n_kf, n_kf);
+D_KF_red = zeros(n_kf, m_kf);
+
+
+sim('disturbed_kalman');
+>>>>>>> parent of 8461406... correct the output
 %% functions
-function [A_tau, Bw_tau, Bu_tau, C_tau, Dw_tau, D_tau] = enlarge(A, Bw, Bu, C, Dw, D, Du, tau)
+function [A_tau, Bw_tau, Bu_tau, C_tau, Dw_tau, D_tau] = enlarge(A, Bw, Bu, C, Dw, D, tau)
 %get dimensions 
 [n, m, p, m_w ] = check_dimensions(A, Bw, Bu, C, Dw, D);
 
@@ -112,6 +138,7 @@ if( n ~=0 ) %if everything is ok
             zeros(m, n+2*m*tau)];
         
     Bu_tau = [zeros(n+m*(tau-1), m);
+<<<<<<< HEAD
               eye(m);
               zeros(m*(tau-1), m);
               eye(m)];
@@ -125,6 +152,14 @@ if( n ~=0 ) %if everything is ok
 %              zeros(m*tau, n), zeros(m*tau), eye(m*tau)];
 %     Dw_tau = [Dw,                   zeros(p, 1);
 %               zeros(tau*m, m_w+1)  ] ;
+=======
+        eye(m)];
+    Bw_tau = [ Bw;
+        zeros(m*tau, m_w)];
+    
+    C_tau = [C, zeros(p, m*tau)];
+    Dw_tau = Dw;
+>>>>>>> parent of 8461406... correct the output
     D_tau = D;
 end
 end
