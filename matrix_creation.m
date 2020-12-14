@@ -55,8 +55,9 @@ R_m_tau = ctrb(A_tau, Bw_tau);
 if( length(A_tau) - rank(R_m_tau) == 0 )
     disp('final system reachable');
 end
-% condi = [ A_tau-eye(size(A_tau))*exp(i*theta), Bw_tau;
-%   C_tau, Dw_tau];
+syms theta
+condi = [ A_tau-eye(size(A_tau))*exp(i*theta), Bw_tau;
+  C_tau, Dw_tau];
 % test = rank(condi);
 
 %compute kalman
@@ -73,30 +74,30 @@ L
     
 %% simulink preparation
 % the real system evolves without -Bu*Du ...
-[A_simu, Bw_simu, Bu_simu, C_simu, Dw_simu, Du_simu] = enlarge(A, Bw, Bu, C, Dw, D, tau);
-B_simu = [Bu_simu, Bw_simu, zeros(size(Bw_simu))];
-D_simu = [Du_simu, zeros(size(Dw_simu)), Dw_simu];
-[n_en, ~] = size(A_simu);
-[~, m_en] =size(B_simu);
-C_simu_state = eye( n_en, n_en);
-D_simu_state = zeros(n_en, m_en);
-
-A_KF = A_tau + K*C_tau;
-B_KF = [Bu_tau, -K];
-[n_kf, ~] = size(A_KF);
-[~, m_kf] = size(B_KF);
-C_KF = eye( n_kf, n_kf );
-D_KF = zeros(n_kf, m_kf);
-
-[n_kf, ~] = size(A);
-A_KF_red = A + K(1:n_kf)*C;
-B_KF_red = [Bu, -K(1:n_kf)];
-[~, m_kf] = size(B_KF_red);
-C_KF_red = eye( n_kf, n_kf);
-D_KF_red = zeros(n_kf, m_kf);
-
-
-sim('disturbed_kalman');
+% [A_simu, Bw_simu, Bu_simu, C_simu, Dw_simu, Du_simu] = enlarge(A, Bw, Bu, C, Dw, D, tau);
+% B_simu = [Bu_simu, Bw_simu, zeros(size(Bw_simu))];
+% D_simu = [Du_simu, zeros(size(Dw_simu)), Dw_simu];
+% [n_en, ~] = size(A_simu);
+% [~, m_en] =size(B_simu);
+% C_simu_state = eye( n_en, n_en);
+% D_simu_state = zeros(n_en, m_en);
+% 
+% A_KF = A_tau + K*C_tau;
+% B_KF = [Bu_tau, -K];
+% [n_kf, ~] = size(A_KF);
+% [~, m_kf] = size(B_KF);
+% C_KF = eye( n_kf, n_kf );
+% D_KF = zeros(n_kf, m_kf);
+% 
+% [n_kf, ~] = size(A);
+% A_KF_red = A + K(1:n_kf)*C;
+% B_KF_red = [Bu, -K(1:n_kf)];
+% [~, m_kf] = size(B_KF_red);
+% C_KF_red = eye( n_kf, n_kf);
+% D_KF_red = zeros(n_kf, m_kf);
+% 
+% 
+% sim('disturbed_kalman');
 %% functions
 function [A_tau, Bw_tau, Bu_tau, C_tau, Dw_tau, D_tau] = enlarge(A, Bw, Bu, C, Dw, D, Du, tau)
 %get dimensions 
@@ -104,18 +105,26 @@ function [A_tau, Bw_tau, Bu_tau, C_tau, Dw_tau, D_tau] = enlarge(A, Bw, Bu, C, D
 
 if( n ~=0 ) %if everything is ok
     
-    A_tau = [A,             Bu,  zeros(n, m*(tau-1));
-            zeros(m*(tau-1), n+m) eye(m*(tau-1));
-        zeros(m, n+m*(tau))];
+    A_tau = [A,             Bu,  zeros(n, m*(tau-1) + m*tau);
+            zeros(m*(tau-1), n+m) eye(m*(tau-1)),   zeros(m*(tau-1), m*tau);
+            zeros(m, n+2*m*(tau));
+            zeros(m*(tau-1), n+m*(tau+1)),          eye(m*(tau-1));
+            zeros(m, n+2*m*tau)];
         
     Bu_tau = [zeros(n+m*(tau-1), m);
-        eye(m)];
-    Bw_tau = [ [ Bw; zeros(m*tau, m_w)] , [zeros(n+m*(tau-1), 1) ; -Du] ] ;
+              eye(m);
+              zeros(m*(tau-1), m);
+              eye(m)];
+    Bw_tau = [ [ Bw; zeros(2*m*tau, m_w)] , [zeros(n+m*(tau-1), 1) ; -Du; zeros(m*tau, 1)] ] ;
     
-    C_tau = [C, zeros(p, m*tau);
-             zeros(m*tau, n), eye(m*tau)];
+    C_tau = [C, zeros(p, 2*m*tau);
+             zeros(m*tau, n), eye(m*tau), zeros(m*tau)];
     Dw_tau = [Dw,                   zeros(p, 1);
-              zeros(tau*m, m_w),    ones(tau*m, 1)*Du] ;
+              zeros(tau*m, m_w),    ones(tau*m,1)*Du    ] ;
+%     C_tau = [C, zeros(p, 2*m*tau);
+%              zeros(m*tau, n), zeros(m*tau), eye(m*tau)];
+%     Dw_tau = [Dw,                   zeros(p, 1);
+%               zeros(tau*m, m_w+1)  ] ;
     D_tau = D;
 end
 end
